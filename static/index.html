@@ -1,0 +1,298 @@
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Calls</title>
+    <link href="/stylesheets/globals.css" media="screen" rel="stylesheet" type="text/css"/>
+    <link href="/stylesheets/main.css" media="screen" rel="stylesheet" type="text/css"/>
+    <link href="/stylesheets/footer.css" media="screen" rel="stylesheet" type="text/css"/>
+    <link href="/stylesheets/reset.css" media="screen" rel="stylesheet" type="text/css"/>
+    <script src="/jquery-2.0.3.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        function replace_ids_with_href(str) {
+            var pattern = /"id": "(.*)"/g
+            str = str.replace(pattern, '"id": "<a href=\"#\" onclick=\"showDoc(\'$1\')">$1</a>"');
+            return str;
+        }
+        function rebuildSelects() {
+            $.getJSON('/document?view=author_count&reduce=true', function (data) {
+                var options = "";
+                $.each(data.body.rows, function (index, value) {
+                    options += "<option value='" + value.key + "'>" + value.key + ' (' + value.value + ' documents)</option>'
+                })
+                $('#select_by_author').find('option').remove().end().append(options);
+            })
+            $.getJSON('/document?view=owner_count&reduce=true', function (data) {
+                var options = "";
+                $.each(data.body.rows, function (index, value) {
+                    options += "<option value='" + value.key + "'>" + value.key + ' (' + value.value + ' documents)</option>'
+                })
+                $('#select_by_owner').find('option').remove().end().append(options);
+            })
+            $.getJSON('/document?view=all&reduce=false', function (data) {
+                var options = "";
+                $.each(data.body.rows, function (index, value) {
+                    options += "<option value='" + value.key + "'>" + value.key + '</option>'
+                })
+                $('#select_by_id').find('option').remove().end().append(options);
+            })
+            $('#select_by_author').on('change', function (event) {
+                searchAuthor($(this).find(":selected").val());
+            })
+            $('#select_by_owner').on('change', function (event) {
+                searchOwner($(this).find(":selected").val());
+            })
+            $('#select_by_id').on('change', function (event) {
+                showDoc($(this).find(":selected").val());
+            })
+        }
+        function searchAuthor(author_id) {
+            $.getJSON('/document?view=by_author&author_id=' + author_id, function (data) {
+                var strData = JSON.stringify(data, null, " ");
+                $('#results').html(replace_ids_with_href(strData));
+            })
+        }
+        function searchOwner(owner_id) {
+            $.getJSON('/document?view=by_owner&owner_id=' + owner_id, function (data) {
+                var strData = JSON.stringify(data, null, " ");
+                $('#results').html(replace_ids_with_href(strData));
+            })
+        }
+        $(document).ready(function () {
+            $('#new_document_form').on('submit', function (event) {
+                event.preventDefault();
+                var data = $('#new_document_form :input').serializeArray();
+                $.ajax({
+                    type: 'POST', url: '/document', data: data,
+                    success: function (data, textStatus, jqXHR) {
+                        $('#results').text(JSON.stringify(data, null, " "));
+                        var errorString = '<ul>';
+                        $.each(data.errors, function (index, value) {
+                            errorString += '<li>' + value + '</li>'
+                        })
+                        errorString += '</ul>'
+                        $('#new_document_errors').html(errorString);
+                        rebuildSelects();
+                    },
+                    fail: function (data, textStatus, jqXHR) {
+                        $('#results').text(JSON.stringify(data, null, " "));
+                        rebuildSelects();
+                    }
+                })
+            });
+            $('#search_by_author_form').on('submit', function (event) {
+                event.preventDefault();
+                var author_id = $('#search_author_id').val();
+                searchAuthor(author_id);
+            });
+            $('#search_by_owner_form').on('submit', function (event) {
+                event.preventDefault();
+                var owner_id = $('#search_owner_id').val();
+                searchOwner(owner_id);
+            });
+            $('#update_document_form').on('submit', function (event) {
+                event.preventDefault();
+                var postData = $(this).serialize();
+                var document_id = $('#update_document_form #update_document_id').val();
+                var url = '/document/' + document_id;
+                $.ajax({
+                    type: 'PUT', url: url, data: postData,
+                    success: function (data, textStatus, jqXHR) {
+                        var errorString = '<ul>';
+                        $.each(data.errors, function (index, value) {
+                            errorString += '<li>' + value + '</li>'
+                        })
+                        errorString += '</ul>'
+                        $('#update_document_errors').html(errorString);
+                        showDoc(document_id);
+                        rebuildSelects();
+                    },
+                    fail: function (data, textStatus, jqXHR) {
+                        showDoc(document_id);
+                        rebuildSelects();
+                    }
+                })
+            })
+            $('#update_document_delete').on('click', function (event) {
+                event.preventDefault();
+                var document_id = $('#update_document_form #update_document_id').val();
+                var url = '/document/' + document_id;
+                $.ajax({
+                    type: 'DELETE', url: url,
+                    success: function (data, textStatus, jqXHR) {
+                        rebuildSelects();
+                    },
+                    fail: function (data, textStatus, jqXHR) {
+                        rebuildSelects();
+                    }
+                })
+            })
+            rebuildSelects();
+        });
+        function showDoc(id) {
+            $.getJSON('/document/' + id, function (data) {
+                $('#results').text(JSON.stringify(data, null, " "));
+                $('#update_document_form #update_document_id').val(data.body['_id'])
+                $('#update_document_form #update_author_id').val(data.body['author_id'])
+                $('#update_document_form #update_owner_id').val(data.body['owner_id'])
+                $('#update_document_form #update_document_heading').html('<h2>Update:</h2><span class="id">' + data.body['_id'] + '</span>')
+            })
+        }
+        function showAll(page, size, view) {
+            if (page == null) page = 1;
+            if (size == null) size = 20;
+            if (view == null) view = 'all'
+            $.getJSON('/document?view=' + view + '&page_number=' + page + '&page_size=' + size, function (data) {
+                var strData = JSON.stringify(data, null, " ");
+                $('#results').html(replace_ids_with_href(strData));
+            })
+        }
+        function recreateAndShowViews() {
+            $.getJSON('/recreate_views', function (data) {
+                $('#results').text(JSON.stringify(data, null, " "));
+            })
+        }
+        function showViews() {
+            $.getJSON('/show_views', function (data) {
+                $('#results').text(JSON.stringify(data, null, " "));
+            })
+        }
+        function deleteAll() {
+            $.ajax({
+                type: 'DELETE', url: '/document',
+                success: function (data, textStatus, jqXHR) {
+                    $('#results').text(JSON.stringify(data, null, " "));
+                },
+                fail: function (data, textStatus, jqXHR) {
+                    $('#results').text(JSON.stringify(data, null, " "));
+                }
+            })
+        }
+        function showAttributes() {
+            $.getJSON('/document/attributes', function(data) {
+                $('#results').text(JSON.stringify(data, null, " "));
+            })
+        }
+    </script>
+</head>
+<body>
+<div class="standard_panel header_panel gradient shadow rounded"><h1>EXAMPLE CALLS</h1></div>
+<div class="standard_panel content_panel rounded left" style="width:180px;">
+    <div class="gradient shadow rounded_top"><h2>Plain Links</h2></div>
+    <div class="body">
+        <ul>
+            <li><a href="#" onclick="showAll(null, null, null)">Show all</a></li>
+            <li><a href="#" onclick="showAll(1, 5, null)">Show page 1 size 5</a></li>
+            <li><a href="#" onclick="showAll(2, 5, null)">Show page 2 size 5</a></li>
+            <li><a href="#" onclick="showAll(2, 5, null)">Show page 2 size 5</a></li>
+            <li><a href="#" onclick="showAll(1, 5, 'by_owner')">Show for owner</a></li>
+            <li><a href="#" onclick="showAll(1, 5, 'by_author')">Show for author</a></li>
+            <li><a href="#" onclick="showViews()">Show views</a></li>
+            <li><a href="#" onclick="showAttributes()">Show document attributes</a></li>
+            <li><a href="#" onclick="deleteAll()">Delete All</a></li>
+            <li><a href="#" onclick="recreateAndShowViews()">Recreate and show views</a></li>
+        </ul>
+    </div>
+</div>
+<div class="standard_panel content_panel rounded left" style="width:340px;">
+    <div class="gradient shadow rounded_top"><h2>Forms</h2></div>
+    <div class="body">
+        <form action="/document" id="new_document_form" method="post">
+            <table style="width:280px;">
+                <tr>
+                    <td colspan="2" style="text-align:center;"><h2>Create</h2></td>
+                </tr>
+                <tr>
+                    <td colspan="2" id="new_document_errors"></td>
+                </tr>
+                <tr>
+                    <td class="label" style="width:100px;"><label for="author_id">Author</label></td>
+                    <td class="input"><input type="text" id="author_id" name="author_id" value="kim"/></td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="owner_id">Owner</label></td>
+                    <td class="input"><input type="text" id="owner_id" name="owner_id" value="app"/></td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="text-align:center;"><input type="submit" id="new_document_submit" value="Create"/></td>
+                </tr>
+            </table>
+        </form>
+        <form action="/document" id="update_document_form" method="put">
+            <input type="hidden" id="update_document_id"/>
+            <table style="width:280px;">
+                <tr>
+                    <td colspan="2" id="update_document_heading" style="text-align:center;"><h2>Update</h2></td>
+                </tr>
+                <tr>
+                    <td colspan="2" id="update_document_errors"></td>
+                </tr>
+                <tr>
+                    <td class="label" style="width:100px;"><label for="update_author_id">Author</label></td>
+                    <td class="input"><input type="text" id="update_author_id" name="author_id"/></td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="update_owner_id">Owner</label></td>
+                    <td class="input"><input type="text" id="update_owner_id" name="owner_id"/></td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="text-align:center;">
+                        <input type="submit" id="update_document_submit" value="Update"/>
+                        <input type="button" id="update_document_delete" value="Delete"/>
+                    </td>
+                </tr>
+            </table>
+        </form>
+        <table style="width:280px;">
+            <tr>
+                <td colspan="2" style="text-align:center;"><h2>Search</h2></td>
+            </tr>
+            <form action="/document" id="search_by_author_form" method="post">
+                <tr>
+                    <td class="input" style="width:100px;"><input type="text" id="search_author_id" name="author_id" value=""/></td>
+                    <td class="input"><input type="submit" id="search_by_author_submit" value="Find for author"/></td>
+                </tr>
+            </form>
+            <form action="/document" id="search_by_owner_form" method="post">
+                <tr>
+                    <td class="input" style="width:100px;"><input type="text" id="search_owner_id" name="owner_id" value=""/></td>
+                    <td class="input"><input type="submit" id="search_by_owner_submit" value="Find for owner"/></td>
+                </tr>
+            </form>
+        </table>
+        <table style="width:280px;">
+            <tr>
+                <td colspan="2" style="text-align:center;"><h2>Dropdowns</h2></td>
+            </tr>
+            <tr>
+                <td class="label" style="width:100px;">Ids:</td>
+                <td class="input"><select id="select_by_id"></select></td>
+            </tr>
+            <tr>
+                <td class="label">Owners:
+                <td class="input"><select id="select_by_owner"></select></td>
+            </tr>
+            <tr>
+                <td class="label">Authors:
+                <td class="input"><select id="select_by_author"></select></td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="standard_panel content_panel rounded left" style="width:500px;">
+    <div class="gradient shadow rounded_top"><h2>JSON Output</h2></div>
+    <div class="body reader">
+        <pre id="results" xstyle="width:580px;height:400px;overflow:scroll">
+        </pre>
+    </div>
+</div>
+<div id="Footer">
+    <div class="wrapper">
+        <div class="leftside">&copy Kimberley Scott</div>
+        <div class="rightside">
+            <a href="http://www.randomactsofsentience.com" target="_blank">Blog</a> &nbsp; | &nbsp;
+            <a href="http://au.linkedin.com/pub/kim-scott/4/736/830/" target="_blank">LinkedIn</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

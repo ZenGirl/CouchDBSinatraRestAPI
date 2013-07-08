@@ -1,0 +1,27 @@
+development:
+  protocol: 'http'
+  host: 192.168.170.26
+  port: 5984
+  prefix: company
+  suffix:
+  username:
+  password:
+
+test:
+  protocol: 'http'
+  host: 192.168.170.26
+  port: 5984
+  prefix: company_test
+  suffix:
+  username:
+  password:
+
+production:
+  protocol: 'http'
+  host: 127.0.0.1
+  port: 5984
+  prefix: company
+  suffix:
+  username:
+  password:
+

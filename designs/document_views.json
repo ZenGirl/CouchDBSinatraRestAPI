@@ -1,0 +1,24 @@
+{
+    "_id": "_design/Company::Document",
+    "language": "javascript",
+    "views": {
+        "all": {
+            "map": "function(doc) { if (doc.type == 'Company::Document')  emit(doc._id, doc) }",
+            "reduce": "function(keys, values, rereduce) {return sum(values);}"
+        },
+        "by_author": {
+            "map": "function(doc) { if (doc.type == 'Company::Document')  emit(doc.author_id, doc) }"
+        },
+        "by_owner": {
+            "map": "function(doc) { if (doc.type == 'Company::Document')  emit(doc.owner_id, doc) }"
+        },
+        "author_count": {
+            "map": "function(doc) { if (doc.type == 'Company::Document')  emit(doc.author_id, 1) }",
+            "reduce": "function(keys, values, rereduce) {return sum(values);}"
+        },
+        "owner_count": {
+            "map": "function(doc) { if (doc.type == 'Company::Document')  emit(doc.owner_id, 1) }",
+            "reduce": "function(keys, values, rereduce) {return sum(values);}"
+        }
+    }
+}
