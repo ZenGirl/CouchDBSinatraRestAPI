@@ -20,6 +20,28 @@ I make no apologies for the code.
 It works.
 That is all.
 
+To use it:
+
+- Install CouchDB someplace.
+
+I have it on an external server as shown in the `config/couchdb.yml` file.
+
+- Clone the repo.
+
+Goes without saying...
+
+- Change the `config/couchdb.yml` file
+
+Change to suit.
+
+- Fire it up
+
+```
+rackup -s thin -o 0.0.0.0 -p 9292 -E development config.ru
+```
+
+Then open a browser to `http://0.0.0.0:9292/index.html` and start playing.
+
 Ms Kimberley Scott.
 Senior Software Engineer
 
