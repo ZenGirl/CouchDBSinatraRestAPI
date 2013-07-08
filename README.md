@@ -2,7 +2,7 @@
 
 Some months ago I was involved in configuring an API to use with CouchDB.
 In the process of this, I created a test application using Sinatra to utilize the various CouchDB REST calls.
-This application is that one.
+This is that application.
 
 Later I created a MUCH more sophisticated set of sub-apps in Padrino to utilize the lessons learned.
 
@@ -41,6 +41,11 @@ rackup -s thin -o 0.0.0.0 -p 9292 -E development config.ru
 ```
 
 Then open a browser to `http://0.0.0.0:9292/index.html` and start playing.
+
+## Honestly
+
+I would love to here from cloners who would like enhancements as I'm always ready to learn.
+If you see a problem, or want to have me change something, tell me.
 
 ## Me
 
